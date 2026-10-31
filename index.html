@@ -114,6 +114,24 @@ li.item:first-child { border-top: 0; }
 .del:hover { color: var(--high); background: var(--bg); }
 .empty { padding: 28px 16px; text-align: center; color: var(--muted); }
 
+/* Wide screens: three columns by priority */
+@media (min-width: 760px) {
+  .app { max-width: 1100px; }
+  form.add { max-width: 640px; }
+}
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.col { display: grid; gap: 10px; min-width: 0; }
+.col-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-inline: 4px; }
+.col-head h2 {
+  margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 1.05rem;
+  display: flex; align-items: center; gap: 8px;
+}
+.col-head h2::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+.col.high { --dot: var(--high); } .col.mid { --dot: var(--mid); } .col.low { --dot: var(--low); }
+.col-head span { color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.board .prio { display: none; }
+.board .empty { padding: 20px 12px; font-size: 0.9rem; }
+
 .foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
 .link { border: 0; background: none; color: var(--accent); padding: 4px 0; font-weight: 500; }
 @media (prefers-reduced-motion: reduce) { .progress div { transition: none; } }
@@ -147,6 +165,7 @@ li.item:first-child { border-top: 0; }
   <div class="progress" aria-hidden="true"><div id="progress"></div></div>
 
   <ul class="list" id="list"></ul>
+  <div class="board" id="board" hidden></div>
 
   <div class="foot">
     <span>Úkoly se ukládají jen v tomto prohlížeči.</span>
@@ -190,21 +209,61 @@ li.item:first-child { border-top: 0; }
     return "úkolů";
   }
 
+  var wide = window.matchMedia("(min-width: 760px)");
+
+  function emptyItem(text) {
+    var li = document.createElement("li");
+    li.className = "empty";
+    li.textContent = text;
+    return li;
+  }
+
   function render() {
     var list = $("list");
+    var board = $("board");
     list.innerHTML = "";
+    board.innerHTML = "";
     var shown = tasks
       .filter(function (t) { return filter === "all" || (filter === "done" ? t.done : !t.done); })
       .sort(function (a, b) { return (a.done - b.done) || (prioOrder[a.prio] - prioOrder[b.prio]); });
 
-    if (!shown.length) {
-      var li = document.createElement("li");
-      li.className = "empty";
-      li.textContent = filter === "done" ? "Zatím nic hotového." : "Žádné úkoly. Přidejte první nahoře.";
-      list.appendChild(li);
+    list.hidden = wide.matches;
+    board.hidden = !wide.matches;
+
+    if (wide.matches) {
+      ["high", "mid", "low"].forEach(function (p) {
+        var items = shown.filter(function (t) { return t.prio === p; });
+        var col = document.createElement("section");
+        col.className = "col " + p;
+        var head = document.createElement("div");
+        head.className = "col-head";
+        var h = document.createElement("h2");
+        h.textContent = prioLabel[p];
+        var n = document.createElement("span");
+        n.textContent = items.length;
+        head.append(h, n);
+        var ul = document.createElement("ul");
+        ul.className = "list";
+        if (!items.length) ul.appendChild(emptyItem("Nic tu není."));
+        items.forEach(function (t) { ul.appendChild(makeItem(t)); });
+        col.append(head, ul);
+        board.appendChild(col);
+      });
+    } else {
+      if (!shown.length) {
+        list.appendChild(emptyItem(filter === "done" ? "Zatím nic hotového." : "Žádné úkoly. Přidejte první nahoře."));
+      }
+      shown.forEach(function (t) { list.appendChild(makeItem(t)); });
     }
 
-    shown.forEach(function (t) {
+    var left = tasks.filter(function (t) { return !t.done; }).length;
+    var done = tasks.length - left;
+    $("count").textContent = "Zbývá " + left + " " + plural(left);
+    $("progress").style.width = tasks.length ? (done / tasks.length * 100) + "%" : "0";
+    $("clearDone").hidden = done === 0;
+  }
+
+  function makeItem(t) {
       var li = document.createElement("li");
       li.className = "item" + (t.done ? " done" : "");
 
@@ -234,15 +293,10 @@ li.item:first-child { border-top: 0; }
       };
 
       li.append(check, text, del);
-      list.appendChild(li);
-    });
-
-    var left = tasks.filter(function (t) { return !t.done; }).length;
-    var done = tasks.length - left;
-    $("count").textContent = "Zbývá " + left + " " + plural(left);
-    $("progress").style.width = tasks.length ? (done / tasks.length * 100) + "%" : "0";
-    $("clearDone").hidden = done === 0;
+      return li;
   }
+
+  if (wide.addEventListener) wide.addEventListener("change", render);
 
   $("addForm").addEventListener("submit", function (e) {
     e.preventDefault();

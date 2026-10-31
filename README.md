@@ -10,6 +10,7 @@ Otevřete `index.html` v prohlížeči.
 
 - přidávání úkolů s prioritou (vysoká / střední / nízká)
 - odškrtávání hotových úkolů a ukazatel postupu
+- na široké obrazovce sloupce podle priority
 - filtry Vše / Zbývá / Hotovo
 - mazání jednotlivých úkolů i všech hotových najednou
 - ukládání do prohlížeče (localStorage)
