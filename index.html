@@ -119,7 +119,16 @@ li.item:first-child { border-top: 0; }
   .app { max-width: 1100px; }
   form.add { max-width: 640px; }
 }
-.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.board {
+  display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 16px; align-items: start;
+  overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px;
+}
+.col { scroll-snap-align: start; }
+.view-toggle {
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 6px 14px; font-weight: 500; font-size: 0.9rem;
+}
+.bar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .col { display: grid; gap: 10px; min-width: 0; }
 .col-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-inline: 4px; }
 .col-head h2 {
@@ -160,7 +169,10 @@ li.item:first-child { border-top: 0; }
       <button type="button" id="f-active" data-filter="active" aria-pressed="false">Zbývá</button>
       <button type="button" id="f-done" data-filter="done" aria-pressed="false">Hotovo</button>
     </div>
-    <div class="count" id="count"></div>
+    <div class="bar-right">
+      <div class="count" id="count"></div>
+      <button type="button" class="view-toggle" id="viewToggle"></button>
+    </div>
   </div>
   <div class="progress" aria-hidden="true"><div id="progress"></div></div>
 
@@ -210,6 +222,13 @@ li.item:first-child { border-top: 0; }
   }
 
   var wide = window.matchMedia("(min-width: 760px)");
+  var VIEW_KEY = "ukolnicek.view";
+  var view = null; // "cols" | "list" | null = podle šířky obrazovky
+  try { view = localStorage.getItem(VIEW_KEY); } catch (e) {}
+
+  function useColumns() {
+    return view ? view === "cols" : wide.matches;
+  }
 
   function emptyItem(text) {
     var li = document.createElement("li");
@@ -227,10 +246,12 @@ li.item:first-child { border-top: 0; }
       .filter(function (t) { return filter === "all" || (filter === "done" ? t.done : !t.done); })
       .sort(function (a, b) { return (a.done - b.done) || (prioOrder[a.prio] - prioOrder[b.prio]); });
 
-    list.hidden = wide.matches;
-    board.hidden = !wide.matches;
+    var cols = useColumns();
+    list.hidden = cols;
+    board.hidden = !cols;
+    $("viewToggle").textContent = cols ? "Zobrazit seznam" : "Zobrazit sloupce";
 
-    if (wide.matches) {
+    if (cols) {
       ["high", "mid", "low"].forEach(function (p) {
         var items = shown.filter(function (t) { return t.prio === p; });
         var col = document.createElement("section");
@@ -297,6 +318,12 @@ li.item:first-child { border-top: 0; }
   }
 
   if (wide.addEventListener) wide.addEventListener("change", render);
+
+  $("viewToggle").addEventListener("click", function () {
+    view = useColumns() ? "list" : "cols";
+    try { localStorage.setItem(VIEW_KEY, view); } catch (e) {}
+    render();
+  });
 
   $("addForm").addEventListener("submit", function (e) {
     e.preventDefault();
