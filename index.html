@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Úkolníček</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow notebook column; input on top, list below, filters as tabs */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #1b2433;
+  --muted: #5d6879;
+  --line: #dde2ea;
+  --accent: #2f4fd8;
+  --accent-ink: #ffffff;
+  --mark: #ffd84d;
+  --high: #d6453d;
+  --mid: #d98a1c;
+  --low: #3a9a6a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151d; --surface: #1a202b; --ink: #e8ecf3; --muted: #98a3b5;
+    --line: #2b3342; --accent: #7d95ff; --accent-ink: #0d1220; --mark: #8a7420;
+    --high: #f07067; --mid: #f0aa4a; --low: #5cc490; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151d; --surface: #1a202b; --ink: #e8ecf3; --muted: #98a3b5;
+  --line: #2b3342; --accent: #7d95ff; --accent-ink: #0d1220; --mark: #8a7420;
+  --high: #f07067; --mid: #f0aa4a; --low: #5cc490; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 48px;
+}
+.app { max-width: 560px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 {
+  font-family: var(--font-display); font-weight: 800; font-size: 2.2rem;
+  line-height: 1.1; margin: 0; letter-spacing: -0.02em; text-wrap: balance;
+}
+h1 span { background: linear-gradient(transparent 60%, var(--mark) 60%); }
+.date { color: var(--muted); font-size: 0.9rem; }
+
+form.add { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+input[type="text"], select {
+  font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0;
+}
+select { padding-inline: 10px; }
+button { font: inherit; cursor: pointer; }
+.btn-add {
+  background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px;
+  padding: 12px 18px; font-weight: 600;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 440px) {
+  form.add { grid-template-columns: 1fr 1fr; }
+  form.add input[type="text"] { grid-column: 1 / -1; }
+}
+
+.bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.tabs button {
+  border: 0; background: transparent; color: var(--muted); border-radius: 999px;
+  padding: 6px 14px; font-weight: 500; font-size: 0.9rem;
+}
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.count { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+.progress { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.progress div { height: 100%; background: var(--low); width: 0; transition: width .3s ease; }
+
+ul.list {
+  list-style: none; margin: 0; padding: 0; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+}
+li.item {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+  padding: 12px 14px; border-top: 1px solid var(--line);
+}
+li.item:first-child { border-top: 0; }
+.check {
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--muted);
+  background: transparent; display: grid; place-items: center; padding: 0; color: var(--accent-ink);
+}
+.done .check { background: var(--low); border-color: var(--low); }
+.check svg { width: 14px; height: 14px; opacity: 0; }
+.done .check svg { opacity: 1; }
+.text { min-width: 0; overflow-wrap: anywhere; }
+.done .text { color: var(--muted); text-decoration: line-through; }
+.prio { display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-right: 6px; }
+.prio.high { color: var(--high); } .prio.mid { color: var(--mid); } .prio.low { color: var(--low); }
+.del {
+  border: 0; background: transparent; color: var(--muted); border-radius: 8px;
+  width: 32px; height: 32px; font-size: 1.2rem; line-height: 1;
+}
+.del:hover { color: var(--high); background: var(--bg); }
+.empty { padding: 28px 16px; text-align: center; color: var(--muted); }
+
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
+.link { border: 0; background: none; color: var(--accent); padding: 4px 0; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .progress div { transition: none; } }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <h1><span>Úkolníček</span></h1>
+    <div class="date" id="date"></div>
+  </header>
+
+  <form class="add" id="addForm" autocomplete="off">
+    <input type="text" id="newText" placeholder="Co je potřeba udělat?" aria-label="Nový úkol" maxlength="200" required>
+    <select id="newPrio" aria-label="Priorita">
+      <option value="high">Vysoká</option>
+      <option value="mid" selected>Střední</option>
+      <option value="low">Nízká</option>
+    </select>
+    <button class="btn-add" type="submit">Přidat</button>
+  </form>
+
+  <div class="bar">
+    <div class="tabs" role="group" aria-label="Filtr">
+      <button type="button" id="f-all" data-filter="all" aria-pressed="true">Vše</button>
+      <button type="button" id="f-active" data-filter="active" aria-pressed="false">Zbývá</button>
+      <button type="button" id="f-done" data-filter="done" aria-pressed="false">Hotovo</button>
+    </div>
+    <div class="count" id="count"></div>
+  </div>
+  <div class="progress" aria-hidden="true"><div id="progress"></div></div>
+
+  <ul class="list" id="list"></ul>
+
+  <div class="foot">
+    <span>Úkoly se ukládají jen v tomto prohlížeči.</span>
+    <button type="button" class="link" id="clearDone">Smazat hotové</button>
+  </div>
+</main>
+
+<script>
+(function () {
+  var KEY = "ukolnicek.v1";
+  var prioLabel = { high: "Vysoká", mid: "Střední", low: "Nízká" };
+  var prioOrder = { high: 0, mid: 1, low: 2 };
+  var filter = "all";
+
+  var sample = [
+    { text: "Ukázka: koupit mléko a chleba", prio: "mid", done: false },
+    { text: "Ukázka: zavolat zubaři kvůli termínu", prio: "high", done: false },
+    { text: "Ukázka: projít si tuhle aplikaci", prio: "low", done: true }
+  ];
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return sample.map(function (t, i) { return Object.assign({ id: Date.now() + i }, t); });
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(tasks)); } catch (e) {}
+  }
+
+  var tasks = load();
+  var $ = function (id) { return document.getElementById(id); };
+
+  $("date").textContent = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long" });
+
+  // Czech plural: 1 úkol, 2–4 úkoly, 5+ úkolů
+  function plural(n) {
+    if (n === 1) return "úkol";
+    if (n >= 2 && n <= 4) return "úkoly";
+    return "úkolů";
+  }
+
+  function render() {
+    var list = $("list");
+    list.innerHTML = "";
+    var shown = tasks
+      .filter(function (t) { return filter === "all" || (filter === "done" ? t.done : !t.done); })
+      .sort(function (a, b) { return (a.done - b.done) || (prioOrder[a.prio] - prioOrder[b.prio]); });
+
+    if (!shown.length) {
+      var li = document.createElement("li");
+      li.className = "empty";
+      li.textContent = filter === "done" ? "Zatím nic hotového." : "Žádné úkoly. Přidejte první nahoře.";
+      list.appendChild(li);
+    }
+
+    shown.forEach(function (t) {
+      var li = document.createElement("li");
+      li.className = "item" + (t.done ? " done" : "");
+
+      var check = document.createElement("button");
+      check.type = "button";
+      check.className = "check";
+      check.setAttribute("aria-label", t.done ? "Označit jako nehotové" : "Označit jako hotové");
+      check.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+      check.onclick = function () { t.done = !t.done; save(); render(); };
+
+      var text = document.createElement("div");
+      text.className = "text";
+      var p = document.createElement("span");
+      p.className = "prio " + t.prio;
+      p.textContent = prioLabel[t.prio];
+      text.appendChild(p);
+      text.appendChild(document.createTextNode(t.text));
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "del";
+      del.setAttribute("aria-label", "Smazat úkol");
+      del.textContent = "×";
+      del.onclick = function () {
+        tasks = tasks.filter(function (x) { return x.id !== t.id; });
+        save(); render();
+      };
+
+      li.append(check, text, del);
+      list.appendChild(li);
+    });
+
+    var left = tasks.filter(function (t) { return !t.done; }).length;
+    var done = tasks.length - left;
+    $("count").textContent = "Zbývá " + left + " " + plural(left);
+    $("progress").style.width = tasks.length ? (done / tasks.length * 100) + "%" : "0";
+    $("clearDone").hidden = done === 0;
+  }
+
+  $("addForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = $("newText");
+    var value = input.value.trim();
+    if (!value) return;
+    tasks.push({ id: Date.now(), text: value, prio: $("newPrio").value, done: false });
+    input.value = "";
+    save(); render();
+    input.focus();
+  });
+
+  document.querySelectorAll(".tabs button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      filter = b.dataset.filter;
+      document.querySelectorAll(".tabs button").forEach(function (x) {
+        x.setAttribute("aria-pressed", String(x === b));
+      });
+      render();
+    });
+  });
+
+  $("clearDone").addEventListener("click", function () {
+    tasks = tasks.filter(function (t) { return !t.done; });
+    save(); render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
